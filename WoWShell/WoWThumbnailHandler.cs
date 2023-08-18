@@ -1,6 +1,7 @@
 ﻿using SharpDX;
 using SharpShell.Attributes;
 using SharpShell.Helpers;
+using SharpShell.SharpThumbnailHandler;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -18,13 +19,14 @@ namespace WoWShell
     {
         public static void Main()
         {
-            DebugM2Thumbs("C:\\Users\\cg3\\Desktop\\Creature", ".\\Output", 80);
+            //DebugM2Thumbs("C:\\Users\\cg3\\Desktop\\Creature", ".\\Output", 80);
             //DebugSingleM2Thumb("C:\\Users\\cg3\\Desktop\\Creature\\AbominationSmall\\AbominationSmall.m2", "test.jpg");
+            //DebugBLPThumbs("C:\\Users\\cg3\\Desktop\\Creature", ".\\Output", 80);
         }
 
         public static void DebugM2Thumbs(string path, string outputFolder, int limit = -1)
         {
-            WoWThumbnailHandler tmb = new WoWThumbnailHandler();
+            M2ThumbnailHandler tmb = new M2ThumbnailHandler();
 
             var filePaths = Directory.GetFiles(path, "*.m2", SearchOption.AllDirectories);
             Directory.CreateDirectory(outputFolder);
@@ -49,17 +51,45 @@ namespace WoWShell
 
         public static void DebugSingleM2Thumb(string filePath, string outputPath)
         {
-            WoWThumbnailHandler tmb = new WoWThumbnailHandler();
+            M2ThumbnailHandler tmb = new M2ThumbnailHandler();
             Bitmap bmp = tmb.RenderM2(512, 512, filePath);
             bmp.Save(outputPath, ImageFormat.Jpeg);
+        }
+
+        public static void DebugBLPThumbs(string path, string outputFolder, int limit = -1)
+        {
+            BLPThumbnailHandler tmb = new BLPThumbnailHandler();
+
+            var filePaths = Directory.GetFiles(path, "*.blp", SearchOption.AllDirectories);
+            Directory.CreateDirectory(outputFolder);
+
+            var filteredFiles = new List<string>();
+            if (limit == -1)
+            {
+                filteredFiles = filePaths.ToList();
+            }
+            else
+            {
+                for (int i = 0; i < limit; i++)
+                    filteredFiles.Add(filePaths[i]);
+            }
+
+            Parallel.ForEach(filteredFiles, new ParallelOptions() { MaxDegreeOfParallelism = 20 }, (filePath) =>
+            {
+                using (var fs = File.OpenRead(filePath))
+                {
+                    Bitmap bmp = tmb.RenderBLP(512, 512, fs);
+                    bmp.Save($"{outputFolder}\\{Path.GetFileNameWithoutExtension(filePath)}.jpg", ImageFormat.Jpeg);
+                }
+            });
         }
     }
 
     [ComVisible(true)]
     [COMServerAssociation(AssociationType.FileExtension, ".m2")]
-    public class WoWThumbnailHandler : /*SharpThumbnailHandler*/ FileThumbnailHandler
+    public class M2ThumbnailHandler : /*SharpThumbnailHandler*/ FileThumbnailHandler
     {
-        public WoWThumbnailHandler() { }
+        public M2ThumbnailHandler() { }
 
         protected override Bitmap GetThumbnailImage(uint width)
         {
@@ -242,6 +272,34 @@ namespace WoWShell
             mesh.faces[9] = new Face(0, 4, 7);
             mesh.faces[10] = new Face(4, 5, 6);
             mesh.faces[11] = new Face(4, 6, 7);
+        }
+    }
+
+    [ComVisible(true)]
+    [COMServerAssociation(AssociationType.FileExtension, ".blp")]
+    public class BLPThumbnailHandler : SharpThumbnailHandler
+    {
+        public BLPThumbnailHandler() { }
+
+        protected override Bitmap GetThumbnailImage(uint width)
+        {
+            try
+            {
+                return RenderBLP(width, width, SelectedItemStream);
+            }
+            catch (Exception exception)
+            {
+                LogError("Error rendering BLP", exception);
+                return null;
+            }
+        }
+
+        public Bitmap RenderBLP(uint width, uint height, Stream str)
+        {
+            SereniaBLPLib.BlpFile blp = new SereniaBLPLib.BlpFile(str);
+            var bmp = blp.GetBitmap(0);
+
+            return bmp;
         }
     }
 }
