@@ -1,0 +1,123 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{ABFA7C57-6EA2-4F63-81F2-EB2C489B43FF}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>WoWShell</RootNamespace>
+    <AssemblyName>WoWShell</AssemblyName>
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>Key.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="SharpShell, Version=2.7.2.0, Culture=neutral, PublicKeyToken=f14dc899472fe6fb, processorArchitecture=MSIL">
+      <HintPath>packages\SharpShell.2.7.2\lib\net40-client\SharpShell.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Array.cs" />
+    <Compile Include="Extensions.cs" />
+    <Compile Include="FileThumbnailHandler.cs" />
+    <Compile Include="M2.cs" />
+    <Compile Include="Renderer\Camera.cs" />
+    <Compile Include="Renderer\Device.cs" />
+    <Compile Include="Renderer\Face.cs" />
+    <Compile Include="Renderer\Mesh.cs" />
+    <Compile Include="Renderer\ScanLineData.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\AngleSingle.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\AssemblyDoc.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Bool4.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\BoundingBox.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\BoundingFrustum.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\BoundingSphere.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Collision.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Color.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Color.Palette.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Color3.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Color4.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\ColorBGRA.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Enums.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\FrustumCameraParams.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Half.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Half2.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Half3.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Half4.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\HalfUtils.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Int3.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Int4.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\MathUtil.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Matrix.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Matrix3x2.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Matrix3x3.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Matrix5x4.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\NamespaceDoc.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\OrientedBoundingBox.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Plane.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Point.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Quaternion.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\RandomUtil.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Ray.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Rectangle.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\RectangleF.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Vector2.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Vector3.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Vector4.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\Viewport.cs" />
+    <Compile Include="Renderer\SharpDX.Mathematics\ViewportF.cs" />
+    <Compile Include="Renderer\Vertex.cs" />
+    <Compile Include="Skin.cs" />
+    <Compile Include="WoWThumbnailHandler.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Key.snk" />
+    <None Include="packages.config" />
+    <None Include="Renderer\SharpDX.Mathematics\SharpDX.Mathematics.csproj" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
