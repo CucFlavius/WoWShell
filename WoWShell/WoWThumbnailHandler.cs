@@ -18,18 +18,49 @@ using System.Xml.Linq;
 using static System.Net.Mime.MediaTypeNames;
 using SharpShell.Interop;
 using System.Threading;
+using System.Text.RegularExpressions;
 
 namespace WoWShell
 {
+    // Only used for Debug purposes, by setting project to console app instead of class library //
     public class TestApp
     {
         public static void Main()
         {
+            DebugM2Thumbs("C:\\Users\\cg3\\Desktop\\Creature", ".\\Output", 80);
+            //DebugSingleM2Thumb("C:\\Users\\cg3\\Desktop\\Creature\\AbominationSmall\\AbominationSmall.m2", "test.jpg");
+        }
+
+        public static void DebugM2Thumbs(string path, string outputFolder, int limit = -1)
+        {
             WoWThumbnailHandler tmb = new WoWThumbnailHandler();
-            //Bitmap bmp = tmb.RenderTestCube(512, 512, "Test Cube");
-            var filePath = ("C:\\Users\\cg3\\Desktop\\Creature\\AbominationSmall\\AbominationSmall.m2");
+
+            var filePaths = Directory.GetFiles(path, "*.m2", SearchOption.AllDirectories);
+            Directory.CreateDirectory(outputFolder);
+
+            var filteredFiles = new List<string>();
+            if (limit == -1)
+            {
+                filteredFiles = filePaths.ToList();
+            }
+            else
+            {
+                for (int i = 0; i < limit; i++)
+                    filteredFiles.Add(filePaths[i]);
+            }
+
+            Parallel.ForEach(filteredFiles, new ParallelOptions() { MaxDegreeOfParallelism = 20 }, (filePath) =>
+            {
+                Bitmap bmp = tmb.RenderM2(512, 512, filePath);
+                bmp.Save($"{outputFolder}\\{Path.GetFileNameWithoutExtension(filePath)}.jpg", ImageFormat.Jpeg);
+            });
+        }
+
+        public static void DebugSingleM2Thumb(string filePath, string outputPath)
+        {
+            WoWThumbnailHandler tmb = new WoWThumbnailHandler();
             Bitmap bmp = tmb.RenderM2(512, 512, filePath);
-            bmp.Save("test.jpg", ImageFormat.Jpeg);
+            bmp.Save(outputPath, ImageFormat.Jpeg);
         }
     }
 
@@ -37,14 +68,7 @@ namespace WoWShell
     [COMServerAssociation(AssociationType.FileExtension, ".m2")]
     public class WoWThumbnailHandler : /*SharpThumbnailHandler*/ FileThumbnailHandler
     {
-        private readonly Lazy<Font> lazyThumbnailFont;
-        private readonly Lazy<Brush> lazyThumbnailTextBrush;
-
-        public WoWThumbnailHandler()
-        {
-            lazyThumbnailFont = new Lazy<Font>(() => new Font("Courier New", 12f));
-            lazyThumbnailTextBrush = new Lazy<Brush>(() => new SolidBrush(System.Drawing.Color.White));
-        }
+        public WoWThumbnailHandler() { }
 
         protected override Bitmap GetThumbnailImage(uint width)
         {
@@ -74,13 +98,13 @@ namespace WoWShell
             return RenderM2(sizeX, sizeY, comStream.Name, br);
         }
 
-        public Bitmap RenderM2(uint sizeX, uint sizeY, string path, BinaryReader br)
+        public Bitmap RenderM2(uint sizeX, uint sizeY, string m2Path, BinaryReader br)
         {
             try
             {
                 M2 m2 = new M2(br);
 
-                if (GetSkinPath(m2, path, out string skinPath))
+                if (GetSkinPath(m2, m2Path, out string skinPath))
                 {
                     using (FileStream sfs = File.OpenRead(skinPath))
                     using (BinaryReader sbr = new BinaryReader(sfs))
@@ -88,9 +112,11 @@ namespace WoWShell
                         Skin skin = new Skin(sbr);
 
                         Mesh[] meshes = new Mesh[skin.submeshes.Length];
+                        BoundingBox overallBounds = new BoundingBox();
                         for (int s = 0; s < skin.submeshes.Length; s++)
                         {
                             meshes[s] = new Mesh("m2", skin.submeshes[s], m2.md20.vertices, skin.vertexIndices, skin.triangleIndices);
+                            overallBounds = BoundingBox.Merge(meshes[s].boundingBox, overallBounds);
                         }
 
                         Camera camera = new Camera();
@@ -99,15 +125,20 @@ namespace WoWShell
                         camera.nearPlane = 0.01f;
                         camera.farPlane = 100.0f;
 
-                        var distance = CalculateCameraDistanceForBoundingBox(m2.md20.boundingBox, camera);
-                        var center = m2.md20.boundingBox.Center;
+                        var distance = CalculateCameraDistanceForBoundingBox(overallBounds, camera);
+                        var center = overallBounds.Center;
 
-                        camera.position = new Vector3(distance, center.Y, 0);
+                        camera.position = new Vector3(distance * 0.80f, center.Y, distance * 0.3f);
                         camera.target = new Vector3(0, center.Y, 0);
 
                         Bitmap bmp = new Bitmap((int)sizeX, (int)sizeY);
                         Device device = new Device(ref bmp);
                         device.Render(camera, meshes);
+
+                        // DEBUG //
+                        //RenderText(Path.GetFileName(m2Path), 0, 0, ref bmp);
+                        //RenderText(Path.GetFileName(skinPath), 0, 20, ref bmp);
+
                         return bmp;
                     }
                 }
@@ -125,41 +156,44 @@ namespace WoWShell
 
         public float CalculateCameraDistanceForBoundingBox(BoundingBox boundingBox, Camera camera)
         {
-            var center = boundingBox.Center;
-            var size = boundingBox.Size;
-            var maxSize = Math.Max(Math.Max(size.X, size.Y), size.Z);
-            var offset = 0;// size.X / 4;
-            var startDistance = Vector3.Distance(center, camera.position);
-            // here we must check if the screen is horizontal or vertical, because camera.fov is
-            // based on the vertical direction.
-            var endDistance = camera.aspectRatio > 1 ?
-                                ((maxSize / 2) + offset) / Math.Abs(Math.Tan(camera.fov / 2.0f)) :
-                                ((maxSize / 2) + offset) / Math.Abs(Math.Tan(camera.fov / 2.0f)) / camera.aspectRatio;
-
-            var distance = endDistance / startDistance;
+            var radius = Math.Max(Math.Max(boundingBox.Size.X, boundingBox.Size.Y), boundingBox.Size.Z);
+            var distance = radius / (Math.Sin(camera.fov / 2f));
             return (float)distance;
         }
 
         public bool GetSkinPath(M2 m2, string m2Path, out string skinPath)
         {
             var dir = Path.GetDirectoryName(m2Path);
-            var fileName = Path.GetFileNameWithoutExtension(dir);
+            var fileName = Path.GetFileNameWithoutExtension(m2Path);
 
+            // Try finding the skin based on the m2 file name
             skinPath = $"{dir}/{fileName}00.skin";
 
             if (File.Exists(skinPath))
                 return true;
-            /*
-            skinPath = $"{m2.md20.name}00.skin";
+
+            // Try finding the skin based on the m2 model name
+            skinPath = $"{dir}/{m2.md20.name}00.skin";
 
             if (File.Exists(skinPath))
                 return true;
-            */
+            
+            // Just find the first skin file in the directory
+            var potentialFiles = Directory.GetFiles(dir, "*00.skin");
+            if (potentialFiles.Length > 0)
+            {
+                skinPath = potentialFiles[0];
+                return true;
+            }
+
             return false;
         }
 
         public Bitmap RenderErrorThumbnail(string errorText, uint sizeX, uint sizeY)
         {
+            Lazy<Font> lazyThumbnailFont = new Lazy<Font>(() => new Font("Courier New", 12f));
+            Lazy<Brush> lazyThumbnailTextBrush = new Lazy<Brush>(() => new SolidBrush(System.Drawing.Color.White));
+
             // Choose the back buffer resolution here
             Bitmap bmp = new Bitmap((int)sizeX, (int)sizeY);
             Camera camera = new Camera();
@@ -182,6 +216,15 @@ namespace WoWShell
                 graphics.DrawString(errorText, lazyThumbnailFont.Value, lazyThumbnailTextBrush.Value, 0, 0);
 
             return bmp;
+        }
+
+        public void RenderText(string text, int x, int y, ref Bitmap bmp)
+        {
+            Lazy<Font> lazyThumbnailFont = new Lazy<Font>(() => new Font("Courier New", 12f));
+            Lazy<Brush> lazyThumbnailTextBrush = new Lazy<Brush>(() => new SolidBrush(System.Drawing.Color.White));
+
+            using (var graphics = Graphics.FromImage(bmp))
+                graphics.DrawString(text, lazyThumbnailFont.Value, lazyThumbnailTextBrush.Value, x, y);
         }
 
         public void GenerateCubeMesh(ref Mesh mesh)

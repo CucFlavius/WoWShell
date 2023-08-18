@@ -11,6 +11,7 @@ namespace WoWShell.Renderer
     {
         public string name { get; set; }
         public Color4 wireColor { get; set; }
+        public BoundingBox boundingBox { get; set; }
         public Vertex[] vertices { get; private set; }
         public Face[] faces { get; set; }
         public Vector3 position { get; set; }
@@ -35,11 +36,23 @@ namespace WoWShell.Renderer
             var vertStart = submesh.startVertex;
             this.vertices = new Vertex[vertCount];
 
+            float minX = float.MaxValue, minY = float.MaxValue, minZ = float.MaxValue;
+            float maxX = float.MinValue, maxY = float.MinValue, maxZ = float.MinValue;
             for (int v = 0; v < vertCount; v++)
             {
                 var vertIdx = vertexIndices[v + vertStart];
-                this.vertices[v] = new Vertex(vertices[vertIdx]);
+                var vertex = new Vertex(vertices[vertIdx]);
+                this.vertices[v] = vertex;
+
+                if (vertex.Coordinates.X < minX) minX = vertex.Coordinates.X;
+                if (vertex.Coordinates.Y < minY) minY = vertex.Coordinates.Y;
+                if (vertex.Coordinates.Z < minZ) minZ = vertex.Coordinates.Z;
+
+                if (vertex.Coordinates.X > maxX) maxX = vertex.Coordinates.X;
+                if (vertex.Coordinates.Y > maxY) maxY = vertex.Coordinates.Y;
+                if (vertex.Coordinates.X > maxZ) maxZ = vertex.Coordinates.Z;
             }
+            this.boundingBox = new BoundingBox(new Vector3(minX, minY, minZ), new Vector3(maxX, maxY, maxZ));
 
             var triCount = submesh.triangleCount;
             var triStart = submesh.startTriangle + (submesh.level << 16);
