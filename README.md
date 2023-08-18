@@ -8,3 +8,7 @@ Current Support: M2, BLP
 
 ## Installing
     Run Installer.exe
+
+## Libs used
+    BLP - https://github.com/WoW-Tools/SereniaBLPLib/tree/master
+    3D Math - https://github.com/sharpdx/SharpDX/tree/master/Source/SharpDX.Mathematics
