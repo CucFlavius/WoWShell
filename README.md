@@ -1,4 +1,7 @@
-# WoWShell
- 
+# WoWShell v0.1.1
 Thumbnail shell for wow m2 models
-Use Server Manager to install https://github.com/dwmkerr/sharpshell/releases/tag/v2.7.2.0
+
+![first pic](./Docs/Images/screenshot1.png?raw=true)
+
+## Installing
+    Run Installer.exe

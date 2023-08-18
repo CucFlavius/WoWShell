@@ -1,24 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.Drawing;
-using SharpShell.SharpThumbnailHandler;
-using System.IO;
-using System.Drawing.Imaging;
-using System.Drawing.Text;
+﻿using SharpDX;
 using SharpShell.Attributes;
-using System.Runtime.InteropServices;
-using WoWShell.Renderer;
-using SharpDX;
 using SharpShell.Helpers;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using System.Xml.Linq;
-using static System.Net.Mime.MediaTypeNames;
-using SharpShell.Interop;
-using System.Threading;
-using System.Text.RegularExpressions;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+using WoWShell.Renderer;
 
 namespace WoWShell
 {
