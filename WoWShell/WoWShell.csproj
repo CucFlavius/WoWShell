@@ -81,6 +81,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ADT.cs" />
     <Compile Include="Array.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="FileThumbnailHandler.cs" />

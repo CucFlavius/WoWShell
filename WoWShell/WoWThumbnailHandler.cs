@@ -2,11 +2,11 @@
 using SharpShell.Attributes;
 using SharpShell.Helpers;
 using SharpShell.SharpThumbnailHandler;
+using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -23,6 +23,7 @@ namespace WoWShell
             //DebugM2Thumbs("C:\\Users\\cg3\\Desktop\\Creature", ".\\Output", 80);
             //DebugSingleM2Thumb("C:\\Users\\cg3\\Desktop\\Creature\\AbominationSmall\\AbominationSmall.m2", "test.jpg");
             //DebugBLPThumbs("C:\\Users\\cg3\\Desktop\\Creature", ".\\Output", 80);
+            DebugADTThumbs("C:\\Users\\cg3\\Desktop\\World\\Maps", ".\\Output", -1);
         }
 
         public static void DebugM2Thumbs(string path, string outputFolder, int limit = -1)
@@ -81,6 +82,35 @@ namespace WoWShell
                 {
                     Bitmap bmp = tmb.RenderBLP(512, 512, fs);
                     bmp.Save($"{outputFolder}\\{Path.GetFileNameWithoutExtension(filePath)}.jpg", ImageFormat.Jpeg);
+                }
+            });
+        }
+
+        public static void DebugADTThumbs(string path, string outputFolder, int limit = -1)
+        {
+            ADTThumbnailHandler tmb = new ADTThumbnailHandler();
+
+            var filePaths = Directory.GetFiles(path, "*.adt", SearchOption.AllDirectories);
+            Directory.CreateDirectory(outputFolder);
+
+            var filteredFiles = new List<string>();
+            if (limit == -1)
+            {
+                filteredFiles = filePaths.ToList();
+            }
+            else
+            {
+                for (int i = 0; i < limit; i++)
+                    filteredFiles.Add(filePaths[i]);
+            }
+
+            Parallel.ForEach(filteredFiles, new ParallelOptions() { MaxDegreeOfParallelism = 20 }, (filePath) =>
+            {
+                using (var fs = File.OpenRead(filePath))
+                {
+                    Bitmap bmp = tmb.RenderADT(512, 512, fs);
+                    if (bmp != null)
+                        bmp.Save($"{outputFolder}\\{Path.GetFileNameWithoutExtension(filePath)}.jpg", ImageFormat.Jpeg);
                 }
             });
         }
@@ -303,6 +333,127 @@ namespace WoWShell
             return bmp;
         }
     }
+
+    [ComVisible(true)]
+    [COMServerAssociation(AssociationType.FileExtension, ".adt")]
+    public class ADTThumbnailHandler : SharpThumbnailHandler
+    {
+        public ADTThumbnailHandler() { }
+
+        protected override Bitmap GetThumbnailImage(uint width)
+        {
+            try
+            {
+                Bitmap bmp = RenderADT(width, width, SelectedItemStream);
+
+                if (bmp == null)
+                {
+                    //bmp = new Bitmap((int)width, (int)width);
+                    //RenderText("NULL", 0, 0, ref bmp);
+                    return null;
+                }
+
+                return bmp;
+            }
+            catch (Exception exception)
+            {
+                Bitmap bmp = new Bitmap((int)width, (int)width);
+                RenderText(exception.Message, 0, 0, ref bmp);
+                LogError("Error rendering ADT", exception);
+                return bmp;
+            }
+        }
+
+        public Bitmap RenderADT(uint width, uint height, Stream str)
+        {
+            const int HEIGHT_CHUNK_RES = 128;
+            const int BLEND_CHUNK_RES = 64;
+
+            using (BinaryReader br = new BinaryReader(str))
+            {
+                ADT adt = new ADT(br);
+
+                if (adt.adtType == ADT.ADTType.Terrain)
+                {
+                    if (adt.heightmap != null)
+                    {
+                        byte[] castData = new byte[HEIGHT_CHUNK_RES * HEIGHT_CHUNK_RES * 3];
+                        int idx = 0;
+                        for (int x1 = 0; x1 < HEIGHT_CHUNK_RES; x1++)
+                        {
+                            for (int y1 = 0; y1 < HEIGHT_CHUNK_RES; y1++)
+                            {
+                                float value = adt.heightmap[x1, y1];
+
+                                float normalized = (value - adt.min) / (adt.max - adt.min);
+                                byte bValue = (byte)(normalized * 255f);
+                                castData[idx] = bValue;
+                                castData[idx + 1] = bValue;
+                                castData[idx + 2] = bValue;
+                                idx += 3;
+                            }
+                        }
+
+                        return RawToBmp(castData, HEIGHT_CHUNK_RES, HEIGHT_CHUNK_RES);
+                    }
+                }
+
+                if (adt.adtType == ADT.ADTType.TEX)
+                {
+                    byte[] castData = new byte[BLEND_CHUNK_RES * BLEND_CHUNK_RES * 3];
+                    int idx = 0;
+                    for (int x1 = 0; x1 < BLEND_CHUNK_RES; x1++)
+                    {
+                        for (int y1 = 0; y1 < BLEND_CHUNK_RES; y1++)
+                        {
+                            castData[idx] = adt.blendMap0[x1, y1];
+                            castData[idx + 1] = adt.blendMap1[x1, y1];
+                            castData[idx + 2] = adt.blendMap2[x1, y1];
+                            idx += 3;
+                        }
+                    }
+
+                    return RawToBmp(castData, BLEND_CHUNK_RES, BLEND_CHUNK_RES);
+                }
+            }
+
+            return null;
+        }
+
+        public void RenderText(string text, int x, int y, ref Bitmap bmp)
+        {
+            Lazy<Font> lazyThumbnailFont = new Lazy<Font>(() => new Font("Courier New", 7f));
+            Lazy<Brush> lazyThumbnailTextBrush = new Lazy<Brush>(() => new SolidBrush(System.Drawing.Color.Red));
+
+            using (var graphics = Graphics.FromImage(bmp))
+                graphics.DrawString(text, lazyThumbnailFont.Value, lazyThumbnailTextBrush.Value, x, y);
+        }
+
+        private Bitmap RawToBmp(byte[] buffer, int width, int height)
+        {
+            Bitmap b = new Bitmap(width, height, PixelFormat.Format24bppRgb);
+
+            System.Drawing.Rectangle BoundsRect = new System.Drawing.Rectangle(0, 0, width, height);
+            BitmapData bmpData = b.LockBits(BoundsRect,
+                                            ImageLockMode.WriteOnly,
+                                            b.PixelFormat);
+
+            IntPtr ptr = bmpData.Scan0;
+
+            // add back dummy bytes between lines, make each line be a multiple of 4 bytes
+            int skipByte = bmpData.Stride - width * 3;
+            byte[] newBuff = new byte[buffer.Length + skipByte * height];
+            for (int j = 0; j < height; j++)
+            {
+                Buffer.BlockCopy(buffer, j * width * 3, newBuff, j * (width * 3 + skipByte), width * 3);
+            }
+
+            // fill in rgbValues
+            Marshal.Copy(newBuff, 0, ptr, newBuff.Length);
+            return b;
+        }
+    }
+
 
     /*
     [ComVisible(true)]
